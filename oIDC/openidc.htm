@@ -1,0 +1,517 @@
+
+<html>
+<head>
+    <title>OpenID Connect 1.0 Sample Application</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<!--    
+Custom Branding is located in style.css.  layout.css contains special formating.
+Neither of these contain required elements for functional and can be commented out to demonstrate that fact -->
+    <link rel="stylesheet" type="text/css" href="../brand/layout.css">
+    <link rel="stylesheet" type="text/css" href="../brand/style.css">
+
+    <script type="text/javascript" src="../js/config.js"></script>  
+    <script type="text/javascript" src="../js/functions.js"></script>  
+
+    <script type="text/javascript" 
+            src="http://cdnjs.cloudflare.com/ajax/libs/sjcl/1.0.0/sjcl.min.js"></script>  
+    <script type="text/javascript"
+            src="http://code.jquery.com/jquery-2.1.3.min.js"></script>    
+
+<!-- 
+Acquire pre-existing session and check it's validity with OpenAM's Session Service
+This Session Service is key to web-based single sign-on that supports notions such as sso across clustered environments, application-based session timeouts, single logout functions & maximum number of sessions a user can have simultanously all without needing to manage these conscepts in each of the target applications -->
+    <script type="text/javascript">
+    //Get Authenticated Session for end-user (AKA resource owner) browser
+    //Three step proccess:   (1)Get Session Handle, (2) Validate Session (3)if invalid, then have user login -->
+
+    
+        var access_token;
+
+            $.ajax({     // Check with OpenAM to see if session is valid
+                url: getBaseURL(),
+                type: "GET",
+                data: {
+                    "tokenid": encodeURIComponent(getSessionHandle())
+                },
+            }).done(function (data) {
+         
+                 if (/false/i.test(data)) {
+                    performLogin("realm=/");   // Session Invalid, force login
+                 }
+            }).fail(function (data) {
+                    console.log("Service Error");  // If repeated error something went wrong.  Make sure JDK1.7
+            });
+
+
+        var client_pwd = sjcl.decrypt(application_credentials_key, enc_client_pwd);   // decrypt application client credentials
+        //var client_pwd = "password"; // decrypt application client credentials
+        var grantCode = getParameterByName("code");    //  URL in form of code=f73518e8-73a6-4311-9618-6b815ce358cd part of OAuth spec
+        
+        if(getParameterByName("state")!=="" && getParameterByName("state")!== sessionStorage.state) {
+            status = "<font color=red>Invalid OpenID State - Discard Transaction</font>";
+            console.log("Invalid State - Discard Transaction");
+            sessionStorage.removeItem("state");
+            sessionStorage.removeItem("nonce");     
+            window.location.replace(window.location.href.match(/^[^\#\?]+/)[0]);
+        }
+
+
+        if(sessionStorage.state){} 
+        else {
+          sessionStorage.state=jQuery.parseJSON( sjcl.encrypt(state_key,Math.random().toString()) ).ct;
+          // set state to be an encypted random number, encrypted using this application's state key
+          // ct is the content of the encrypted value stored in the json object returned from sjcl.encrypt function
+          // this will be used to compare to recived messages containing state and associated with the value in the OAuth and OpenID Connect protocol transactions for this session
+          sessionStorage.nonce=jQuery.parseJSON( sjcl.encrypt(nonce_key,Math.random().toString()) ).ct;
+          // set nonce to be an encypted random number, encrypted using this application's nonce key
+          // ct is the content of the encrypted value stored in the json object returned from sjcl.encrypt function
+          // this will be used to compare to recived messages containing nonce and associated with the value in the OpenID token for this session
+        }
+        console.log("state: "+sessionStorage.state);
+        console.log("nonce: "+sessionStorage.nonce);
+
+    </script>
+
+</head>
+<body>
+
+
+<!-- Layout Header -->
+<div id="header">  
+    <table><tr>
+        <td width=600><img src="../brand/logo.png"/></td>     
+        <td><img src="openid-r-logo.png"/><img src="openidc.png"/></td></td>
+    </tr></table>
+</div>
+
+<!-- Layout Page -->
+<div class="colmask fullpage">
+    <div class="col1">
+        <!-- Column 1 start -->
+
+
+
+
+<!-- Info Table -->
+        <h2 id="titlestat">#</h2>
+
+<table id="hor-minimalist-a" summary="Infomation Block">
+
+    <tbody>
+      <tr >
+          <td class="odd">Session Handle:</td>
+            <td id="sessionHandle"> </td>
+
+        </tr>
+        <tr>
+          <td class="odd">Access Token:</td>
+            <td id="aToken"> </td>
+
+        </tr>
+       <tr >
+          <td class="odd">Refresh Token</td>
+            <td id="rToken"> </td>
+
+        </tr>
+        <tr>
+          <td class="odd">Expires</td>
+            <td id="expires"> </td>
+        </tr>
+
+        <tr>
+          <td class="odd">Email Address</td>
+            <td id="mail"> </td>
+        </tr>        
+
+        <tr>
+          <td class="odd">Profile Attributes</td>
+            <td id="attributes"> </td>
+        </tr>
+
+    </tbody>
+</table>
+
+
+<table id="newspaper-a" summary="Protocol Execution">
+  <thead>
+     <tr>
+                <th scope="col">Test Authorization & Access Token</th>
+            <th scope="col">View Objects and Responses</th>
+ 
+      </tr>
+ </thead>
+    <tbody>
+         <!-- #1 AUTHORIZE:    GET: /openam/oauth2/authorize?[response_type]&[scope]&[client_id]&[nonce]&[state][redirect_uri]  -->
+      <tr>
+          <td><a href='#' id='oauthz' style='display:;'> 1) Run OAuth2.0 Authorization Request</a></td>          <td></td>
+      </tr>
+
+      <tr>
+         <!-- #2 ACCESS_TOKEN:  AUTHN+POST: /openam/oauth2/access_token?[grant_type]&[code]&[redirect_uri]  --> 
+          <td><a href='#' id='oaccess' onClick='accessReq()' style='display:none;'> 2) Run OAuth2.0 Access Token Request </a></td>
+          <td><a href='#' id='viewlink2' onclick=toggleDisp('resinfo2') style='display:none;' >VIEW OAuth Access Response</a>
+                <span id='resinfo2' style='display:none;'><textarea id="oauthToken" rows="40" cols="100">
+                </textarea></span>
+          </td>
+      </tr>
+      <tr><td></td>
+          <td><a href='#' id='viewlink4' onclick=toggleDisp('resinfo4') style='display:none;'>VIEW OpenID Token</a>
+                  <span id='resinfo4' style='display:none;'><textarea id="openid_token" rows="40" cols="100">
+                  </textarea></span>
+      </tr>        
+
+                  <!--
+                      POST option for authzReq() not yet implemented
+                  <br><b><a href='#' id='oauthz_post' onClick='authzReqPost()'> Run OAuth2.0 Authorization Request (w/forced grant)</a></b></br>
+                  -->
+      <tr>
+          <!-- #3 TOKENINFO:   GET: /openam/oauth2/tokeninfo?[access_token] > JSON  -->
+          <td><a href='#' id='otoken' onClick='tokenInfo()' style='display:none;'> 3) Run OAuth2.0 Token Info Request (Optional)</a></td>
+          <td><a href='#' id='viewlink3' onclick=toggleDisp('resinfo3') style='display:none;'>VIEW OAuth Token</a>
+                  <span id='resinfo3' style='display:none;'><textarea id="json_token" rows="40" cols="100">
+                  </textarea></span>
+          </td>
+      </tr>
+
+      <tr>
+          <!-- #4 USERINFO:   POST: /openam/oauth2/userinfo?[Bearer: access_token] > JSON  -->
+          <td><a href='#' id='userInfo' onClick='userInfo()' style='display:none;'> 4) Run OpenID Connect User Info Request </a></td>
+          <td><a href='#' id='viewlink5' style='display:none;' onclick=toggleDisp('resinfo5')>VIEW User Info Response</a>
+                  <span style='display:none;' id='resinfo5'><textarea id="user_info" rows="40" cols="100">
+                  </textarea></span>
+          </td>
+      </tr>      
+
+
+
+
+      </tbody>
+</table>
+
+<br><b><a href='#' id='logout' style='display:;'>Logout User Session</a></b></br>                                         <!-- GET: /openam/UI/Logout  -->
+
+<!-- Launch Requests -->
+
+
+       <!-- Column 1 end -->
+
+    </div>
+</div>
+
+
+
+<!--  Layout Footer -->
+<div id="footer">
+    <p>A ForgeRock Demonstration Client Application&nbsp;&nbsp|&nbsp;&nbsp
+    <a href="../REST/rest.htm">OpenAM REST</a>&nbsp;&nbsp|&nbsp;&nbsp  
+    <a href="../oIDc/openidc.htm">OpenID Connect</a>&nbsp;&nbsp|&nbsp;&nbsp 
+    <a href="/fedlet">SAML Fedlet</a>&nbsp;&nbsp|&nbsp;&nbsp               
+    <a href="../oauth2/oauth2.htm">OAuth 2.0</a>&nbsp;&nbsp|&nbsp;&nbsp
+    <a href="/openam/UI/Logout">OpenAM Logout</a>&nbsp;&nbsp|&nbsp;&nbsp  
+    </br>
+</div>
+
+
+<!--   END OF PAGE - - - - - - - - - - - - - - - - - - - - - - - - - - - - - End of Page  /   Start of JavaScript Section -->
+<!--   JAVASCRIPT SECTION -->
+
+<!--  JAVASCRIPT: Set URLs -->
+
+<script type="text/javascript">
+    $("#sessionHandle").html(getSessionHandle());   // Display existing session handle
+
+     $("#oauthz").attr("href", getBaseURL()+      //OAuth Authorization Request, with OpenID Connect required parameters
+        "/openam/oauth2/authorize"+"?response_type=code"+   
+        "&scope=openid%20profile"+   //OPENID CONNECT adds openid token to scope
+        "&nonce="+encodeURIComponent(sessionStorage.nonce)+                         //OPENID CONNECT adds a nonce and a state
+        "&state="+encodeURIComponent(sessionStorage.state)+          //OPENID CONNECT  adds a nonce and a state
+        "&client_id="+client_id+"&redirect_uri="+window.location.href.split('?')[0]);
+
+     $("#logout").attr("href", getBaseURL()+"/openam/UI/Logout");
+
+
+       if (/code/i.test(window.document.URL.toString())) {
+          $("#titlestat").html("Client has recieved a Grant Code");
+          toggleDisp('oaccess'); //make visible
+       } else {
+          $("#titlestat").html("Valid OpenAM Authenticated Session");
+       }
+
+     if (status) {$("#titlestat").html(status);}
+ </script>
+
+
+
+
+<!-- JAVASCRIPT: Functions that execute Web Service Calls to OpenAM -->
+<script type="text/javascript">
+
+     function accessReq(){
+        /**
+           SOURCE: OAUTH2.0 SPEC: http://tools.ietf.org/html/rfc6749#section-4.1.3
+           The client makes a request to the token endpoint by sending the
+           following parameters using the "application/x-www-form-urlencoded"
+           format with a character encoding of UTF-8 in the HTTP
+           request entity-body:
+
+           grant_type
+                 REQUIRED.  Value MUST be set to "authorization_code".
+
+           code
+                 REQUIRED.  The authorization code received from the
+                 authorization server.
+
+           redirect_uri
+                 REQUIRED, if the "redirect_uri" parameter was included in the
+                 authorization request and their values MUST be identical.
+
+           client_id
+                 REQUIRED, if the client is not authenticating with the
+                 authorization server.
+        **/
+       var endPoint = getBaseURL()+"/openam/oauth2/access_token";
+
+        $.ajax({
+            url: endPoint,
+            type: "POST",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization",
+                        basicAuth(client_id, client_pwd));
+            },
+            data: {
+                "grant_type": "authorization_code",
+                "realm": "/",
+                "code": grantCode,
+                "redirect_uri": window.location.href.split('?')[0]
+            },
+            accepts: "json"
+        }).done(function (data) {
+
+
+            var idToken = data.id_token;
+            idToken = idToken.split(/\./);
+            idToken = JSON.parse(atob(idToken[1]));      
+
+
+            // Validate id_token
+
+
+            if (idToken.nonce != sessionStorage.nonce) {
+                $("#titlestat").html("<font color=red>Invalid id_token nonce: </font>"
+                        + idToken.iss);
+            }
+
+
+
+            if (!idToken.ops) {
+                $("#titlestat").html("<font color=red>Token mismatch </font>"
+                        + idToken.iss);
+            }
+
+
+            if (idToken.ops != getSessionHandle()) {
+                $("#titlestat").html("<font color=red>Token mismatch </font>"
+                        + idToken.iss);
+            }
+
+
+            if (idToken.iss != getBaseURL()+"/openam") {
+              console.log(idToken.iss);
+              //console.log(getBaseURL)
+                $("#titlestat").html("<font color=red>Invalid id_token issuer: </font>"
+                        + idToken.iss);
+            }
+
+            if ((idToken.aud instanceof Array
+                            && idToken.aud.indexOf(client_id) == -1)
+                        || (idToken.aud != client_id)) {
+                $("#titlestat").html("<font color=red>Invalid id_token audience: </font>"
+                        + idToken.aud);
+            }
+
+            if (idToken.azp instanceof Array
+                    && idToken.azp != client_id) {
+                $("#titlestat").html(
+                        "<font color=red>Invalid id_token authorized party: </font>"
+                        + idToken.azp);
+            }
+
+            var now = new Date().getTime() / 1000;
+            if (now >= idToken.exp) {
+                $("#titlestat").html("<font color=red>The id_token has expired.</font>");
+            }
+
+
+            $("#titlestat").html("Recieved OAuth with embedded OpenID Token");
+            access_token=data.access_token;
+            $("#aToken").html(data.access_token);
+            $("#rToken").html(data.refresh_token);
+            $("#expires").html(data.expires_in);
+            $("#openid_token").html(JSON.stringify(idToken, undefined, 2));
+            $("#oauthToken").html(JSON.stringify(data, undefined, 2));
+            toggleDisp('viewlink2');
+            toggleDisp('otoken');
+            toggleDisp('viewlink4');
+            toggleDisp('userInfo');
+
+            
+    
+       }).fail(function (data) {
+            sessionStorage.removeItem("state");
+            sessionStorage.removeItem("nonce");
+            $("#titlestat").html("<font color=red>Token has expired</font>");
+            $("#aToken").html("");  // clear info text
+            $("#rToken").html("");  // clear info text
+            $("#expires").html("");  // clear info text
+            $("#cn").html("");  // clear info text
+            $("#mail").html("");  // clear info text
+            $("#groups").html("");  // clear info text    
+            $("#oaccess").attr("href", window.location.href.split('?')[0]);               
+            $("#otoken").attr("href", window.location.href.split('?')[0]);   
+            document.getElementById('oaccess').display = 'none';   //hide
+            document.getElementById('otoken').display = 'none';   //hide
+            document.getElementById('userInfo').display = 'none';   //hide
+            document.getElementById('viewlink2').display = 'none';   //hide
+            document.getElementById('viewlink3').display = 'none';   //hide
+            document.getElementById('viewlink4').display = 'none';   //hide   
+            document.getElementById('viewlink5').display = 'none';   //hide                     
+        });
+     }   // End of accessReq()
+
+
+    function tokenInfo(){
+        /**
+      
+        **/
+       var endPoint = getBaseURL()+"/openam/oauth2/tokeninfo";
+
+        $.ajax({
+            url: endPoint,
+            type: "GET",
+            data: {
+                "access_token": access_token
+
+            },
+            accepts: "json"
+        }).done(function (data) {
+            $("#titlestat").html("Received OAuth2 TokenInfo Response");          
+            $("#aToken").html(data.access_token);
+            $("#rToken").html(data.refresh_token);
+            $("#cn").html(data.cn);
+            $("#mail").html(data.mail);
+            $("#groups").html(data.groups);
+            $("#expires").html(data.expires_in);
+            $("#json_token").html(JSON.stringify(data, undefined, 2));
+            toggleDisp('viewlink3');
+        }).fail(function (data) {
+            sessionStorage.removeItem("state");
+            sessionStorage.removeItem("nonce");
+            $("#titlestat").html("<font color=red>Token has expired</font>");
+            $("#json_token").html("Access Token, no longer valid");  // Token invalid
+            $("#aToken").html("");  // clear info text
+            $("#rToken").html("");  // clear info text
+            $("#expires").html("");  // clear info text
+            $("#cn").html("");  // clear info text
+            $("#mail").html("");  // clear info text
+            $("#attributes").html("");  // clear info text            
+            $("#groups").html("");  // clear info text    
+            $("#oaccess").attr("href", window.location.href.split('?')[0]);               
+            $("#otoken").attr("href", window.location.href.split('?')[0]);   
+            document.getElementById('oaccess').display = 'none';   //hide
+            document.getElementById('otoken').display = 'none';   //hide
+            document.getElementById('userInfo').display = 'none';   //hide
+            document.getElementById('viewlink2').display = 'none';   //hide
+            document.getElementById('viewlink3').display = 'none';   //hide
+            document.getElementById('viewlink4').display = 'none';   //hide   
+            document.getElementById('viewlink5').display = 'none';   //hide                     
+        });
+     }   // End of tokenInfo()    
+
+
+
+    function userInfo(){
+        /**
+      
+        **/
+       var endPoint = getBaseURL()+"/openam/oauth2/userinfo";
+
+        $.ajax({
+            url: endPoint,
+            type: "POST",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization",
+                "Bearer " + access_token);   
+            }        
+
+        }).done(function (data) {
+            $("#titlestat").html("Received OpenID Connect UserInfo Response");          
+            $("#attributes").html(JSON.stringify(data, undefined, 2));
+            $("#user_info").html(JSON.stringify(data, undefined, 2));
+            toggleDisp('viewlink5');
+        }).fail(function (data) {
+            sessionStorage.removeItem("state");
+            sessionStorage.removeItem("nonce");          
+            $("#titlestat").html("<font color=red>Token has expired</font>");
+            $("#json_token").html("Access Token, no longer valid");  // Token invalid
+            $("#aToken").html("");  // clear info text
+            $("#rToken").html("");  // clear info text
+            $("#expires").html("");  // clear info text
+            $("#cn").html("");  // clear info text
+            $("#mail").html("");  // clear info text
+            $("#attributes").html("");  // clear info text            
+            $("#groups").html("");  // clear info text    
+            $("#oaccess").attr("href", window.location.href.split('?')[0]);               
+            $("#otoken").attr("href", window.location.href.split('?')[0]);       
+            document.getElementById('oaccess').display = 'none';   //hide
+            document.getElementById('otoken').display = 'none';   //hide
+            document.getElementById('userInfo').display = 'none';   //hide
+            document.getElementById('viewlink2').display = 'none';   //hide
+            document.getElementById('viewlink3').display = 'none';   //hide
+            document.getElementById('viewlink4').display = 'none';   //hide   
+            document.getElementById('viewlink5').display = 'none';   //hide                 
+        });
+     }   // End of tokenInfo()    
+
+/**
+
+
+
+
+SOURCE: OPENID CONNECT 1.0 SPEC: :http://openid.net/specs/openid-connect-core-1_0.html
+
++--------+                                   +--------+
+|        |                                   |        |
+|        |---------(1) AuthN Request-------->|        |
+|        |                                   |        |
+|        |  +--------+                       |        |
+|        |  |        |                       |        |
+|        |  |  End-  |<--(2) AuthN & AuthZ-->|        |
+|        |  |  User  |                       |        |
+|   RP   |  |        |                       |   OP   |
+|        |  +--------+                       | OPENAM |
+|        |                                   |        |
+|        |<--------(3) AuthN Response--------|        |
+|        |                                   |        |
+|        |---------(4) UserInfo Request----->|        |
+|        |                                   |        |
+|        |<--------(5) UserInfo Response-----|        |
+|        |                                   |        |
++--------+                                   +--------+
+
+ The OpenID Connect protocol, in abstract, follows the following steps.
+
+The RP (Client) sends a request to the OpenID Provider (OP).
+The OP authenticates the End-User and obtains authorization.
+The OP responds with an ID Token and usually an Access Token.
+The RP can send a request with the Access Token to the UserInfo Endpoint.
+The UserInfo Endpoint returns Claims about the End-User.
+
+
+**/
+
+
+</script>
+
+
+</body>
+</html>
