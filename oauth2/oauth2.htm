@@ -48,6 +48,7 @@ This Session Service is key to web-based single sign-on that supports notions su
 
         var grantCode = getParameterByName("code");  //  URL in form of code=f73518e8-73a6-4311-9618-6b815ce358cd
         var client_pwd = sjcl.decrypt(application_credentials_key, enc_client_pwd);   // decrypt application client credentials
+
     </script>
 
 </head>
@@ -106,12 +107,6 @@ This Session Service is key to web-based single sign-on that supports notions su
             <td id="mail"> </td>
         </tr>
 
-        <tr>
-          <td class="odd">Groups</td>
-            <td id="groups"> </td>
-        </tr>
-
-
     </tbody>
 </table>
 
@@ -147,7 +142,6 @@ This Session Service is key to web-based single sign-on that supports notions su
 <br><b><a href='#' id='oauthz'> Run OAuth2.0 Authorization Request</a></b></br>                         <!-- GET: /openam/oauth2/authorize?[response_type]&[scope]&[client_id]&[redirect_uri]  -->
 <br><b><a href='#' id='oaccess' onClick='accessReq()'> Run OAuth2.0 Access Token Request </a></b></br>  <!-- AUTHN+POST: /openam/oauth2/access_token?[grant_type]&[code]&[redirect_uri]  -->
 <br><b><a href='#' id='otoken' onClick='tokenInfo()'> Run OAuth2.0 Token Info Request </a></b></br>     <!-- GET: /openam/oauth2/tokeninfo?[access_token] > JSON  -->
-<br><b><a href='#' id='logout'>Logout User Session</a></b></br>                                         <!-- GET: /openam/UI/Logout  -->
 
        <!-- Column 1 end -->
 
@@ -163,7 +157,7 @@ This Session Service is key to web-based single sign-on that supports notions su
     <a href="../oIDc/openidc.htm">OpenID Connect</a>&nbsp;&nbsp|&nbsp;&nbsp 
     <a href="/fedlet">SAML Fedlet</a>&nbsp;&nbsp|&nbsp;&nbsp               
     <a href="../oauth2/oauth2.htm">OAuth 2.0</a>&nbsp;&nbsp|&nbsp;&nbsp
-    <a href="/openam/UI/Logout">OpenAM Logout</a>&nbsp;&nbsp|&nbsp;&nbsp  
+    <a href="/openam/UI/Logout">Logout</a>&nbsp;&nbsp|&nbsp;&nbsp  
     </br>
 </div>
 
@@ -180,7 +174,7 @@ This Session Service is key to web-based single sign-on that supports notions su
 
      $("#oauthz").attr("href", getBaseURL()+
         "/openam/oauth2/authorize"+"?response_type=code"+
-        "&scope=email%20openid"+
+        "&scope=mail%20cn%20openid"+
         "&client_id="+client_id+"&redirect_uri="+window.location.href.split('?')[0]);
 
      $("#logout").attr("href", getBaseURL()+"/openam/UI/Logout");

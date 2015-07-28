@@ -22,7 +22,6 @@ var openamLogout = "/identity/logout";
 var authorize = "/oauth2/authorize";
 var access = "/oauth2/access_token";
 var info = "/oauth2/userinfo";
-var validtoken = "/openam/identity/isTokenValid";
 var namingID = "/openam/identity/getCookieNameForToken";
 //var cookieName = "EXECUTE REST CALL to <- /openam/identity/getCookieNameForToken";  //results in string=iPlanetDirectoryPro as default
 
