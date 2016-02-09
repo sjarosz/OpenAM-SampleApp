@@ -20,9 +20,10 @@ This Session Service is key to web-based single sign-on that supports notions su
     <script type="text/javascript">
     //Get Authenticated Session for end-user (AKA resource owner) browser
     //Three step proccess:   (1)Get Session Handle, (2) Validate Session (3)if invalid, then have user login -->
-     	var endpoint=getBaseURL() +"/openam/identity/isTokenValid";  
+
+
             $.ajax({     // Check with OpenAM to see if session is valid
-                url: endpoint ,
+                url: getBaseURL(),
                 type: "GET",
                 data: {
                     "tokenid": encodeURIComponent(getSessionHandle())
