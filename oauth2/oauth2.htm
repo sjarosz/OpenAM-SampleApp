@@ -1,4 +1,25 @@
+<<<<<<< HEAD
+=======
 
+<!--
+DISCLAIMER: The sample code described herein is provided on an "as is" basis, without 
+warranty of any kind, to the fullest extent permitted by law. ForgeRock does not warrant 
+or guarantee the individual success developers may have in implementing the sample code on 
+their development platforms or in production configurations.
+ForgeRock does not warrant, guarantee or make any representations regarding the 
+use, results of use, accuracy, timeliness or completeness of any data or information relating to the sample code. 
+ForgeRock disclaims all warranties, expressed or implied, and in particular, disclaims all warranties of merchantability, 
+and warranties related to the code, or any service or software related thereto.
+ForgeRock shall not be liable for any direct, indirect or consequential damages or costs of any type arising 
+out of any action taken by you or others related to the sample code.
+
+-->
+
+
+<<<<<<< HEAD
+>>>>>>> origin/master
+=======
+>>>>>>> origin/master
 <html>
 <head>
     <title>OAuth 2.0 Sample Application</title>
@@ -18,35 +39,29 @@ Neither of these contain required elements for functional and can be commented o
 
     <script type="text/javascript" 
             src="../js/sjcl.min.js"></script>  
-    <script type="text/javascript"
-            src="/openam/XUI/libs/jquery-1.11.1-min.js"></script>    
+  <script type="text/javascript" src="/openam/XUI/libs/jquery-2.1.1-min.js"></script>   
 
 <!-- 
 Acquire pre-existing session and check it's validity with OpenAM's Session Service
 This Session Service is key to web-based single sign-on that supports notions such as sso across clustered environments, application-based session timeouts, single logout functions & maximum number of sessions a user can have simultanously all without needing to manage these conscepts in each of the target applications -->
     <script type="text/javascript">
-    //Get Authenticated Session for end-user (AKA resource owner) browser
-    //Three step proccess:   (1)Get Session Handle, (2) Validate Session (3)if invalid, then have user login -->
-
-        var endpoint=getBaseURL() +"/openam/identity/isTokenValid";   
-        var s = getSessionHandle();   
-
-
+        var s = getSessionHandle();
         var access_token;
 
+    //Get Authenticated Session for end-user (AKA resource owner) browser
+    //Three step proccess:   (1)Get Session Handle, (2) Validate Session (3)if invalid, then have user login -->
+        var endpoint=getBaseURL() +"/openam/json/sessions/"+getSessionHandle()+"?_action=validate";  
             $.ajax({     // Check with OpenAM to see if session is valid
                 url: endpoint,
-                type: "GET",
-                data: {
-                    "tokenid": encodeURIComponent(s)
-                },
+                type: "POST",
+                dataType: "json",
+                accepts: "json"
             }).done(function (data) {
-         
-                 if (/false/i.test(data)) {
-                    performLogin("realm=/");   // Session Invalid, force login
+                 if (!data.valid) {
+                    window.location.replace(AuthNUrl("realm=/"));   // Session Invalid, force login
                  }
             }).fail(function (data) {
-                    alert("OpenAM Token Service is down");  // Something went wrong.
+                    console.log("Service Error");  // If repeated error something went wrong.  
             });
 
         var grantCode = getParameterByName("code");  //  URL in form of code=f73518e8-73a6-4311-9618-6b815ce358cd

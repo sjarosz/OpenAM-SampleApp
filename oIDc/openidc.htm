@@ -1,4 +1,17 @@
 
+<!--
+DISCLAIMER: The sample code described herein is provided on an "as is" basis, without 
+warranty of any kind, to the fullest extent permitted by law. ForgeRock does not warrant 
+or guarantee the individual success developers may have in implementing the sample code on 
+their development platforms or in production configurations.
+ForgeRock does not warrant, guarantee or make any representations regarding the 
+use, results of use, accuracy, timeliness or completeness of any data or information relating to the sample code. 
+ForgeRock disclaims all warranties, expressed or implied, and in particular, disclaims all warranties of merchantability, 
+and warranties related to the code, or any service or software related thereto.
+ForgeRock shall not be liable for any direct, indirect or consequential damages or costs of any type arising 
+out of any action taken by you or others related to the sample code.
+
+-->
 <html>
 <head>
     <title>OpenID Connect 1.0 Sample Application</title>
@@ -19,8 +32,9 @@ Neither of these contain required elements for functional and can be commented o
 
     <script type="text/javascript" 
             src="../js/sjcl.min.js"></script>  
-    <script type="text/javascript"
-            src="/openam/XUI/libs/jquery-1.11.1-min.js"></script>    
+
+
+<script type="text/javascript" src="/openam/XUI/libs/jquery-2.1.1-min.js"></script>   
 
 
 <!-- 
@@ -32,21 +46,24 @@ This Session Service is key to web-based single sign-on that supports notions su
 
     
         var access_token;
+        var s = getSessionHandle();
 
+
+
+  var endpoint=getBaseURL() +"/openam/json/sessions/"+getSessionHandle()+"?_action=validate";  
             $.ajax({     // Check with OpenAM to see if session is valid
-                url: getBaseURL() +"/openam/identity/isTokenValid",
-                type: "GET",
-                data: {
-                    "tokenid": encodeURIComponent(getSessionHandle())
-                },
+                url: endpoint,
+                type: "POST",
+                dataType: "json",
+                accepts: "json"
             }).done(function (data) {
-         
-                 if (/false/i.test(data)) {
-                    performLogin("realm=/");   // Session Invalid, force login
+                 if (!data.valid) {
+                    window.location.replace(AuthNUrl("realm=/"));   // Session Invalid, force login
                  }
             }).fail(function (data) {
-                    console.log("Service Error");  // If repeated error something went wrong.  Make sure JDK1.7
+                    console.log("Service Error");  // If repeated error something went wrong.  
             });
+
 
 
         var client_pwd = sjcl.decrypt(application_credentials_key, enc_client_pwd);   // decrypt application client credentials
